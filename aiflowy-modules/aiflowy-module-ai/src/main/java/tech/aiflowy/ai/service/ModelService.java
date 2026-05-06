@@ -27,4 +27,9 @@ public interface ModelService extends IService<Model> {
     Model getModelInstance(BigInteger modelId);
 
     void updateByEntity(Model entity);
+
+    /**
+     * 获取系统配置的大模型
+     */
+    Model getSystemModel();
 }

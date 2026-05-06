@@ -29,13 +29,14 @@ import HeaderSearch from '#/components/headerSearch/HeaderSearch.vue';
 import CardList from '#/components/page/CardList.vue';
 import PageData from '#/components/page/PageData.vue';
 import PageSide from '#/components/page/PageSide.vue';
+import WikiOptimizer from '#/components/wiki/WikiOptimizer.vue';
 
 const router = useRouter();
 
 interface FieldDefinition {
   prop: string;
   label: string;
-  type?: 'input' | 'number' | 'select';
+  type?: 'input' | 'number' | 'select' | 'textarea';
   required?: boolean;
   placeholder?: string;
 }
@@ -288,47 +289,15 @@ const wikiDialogVisible = ref(false);
 const wikiFormRef = ref<FormInstance>();
 const wikiSaveLoading = ref(false);
 
-const wikiFieldDefinitions = ref<FieldDefinition[]>([
-  {
-    prop: 'title',
-    label: $t('wiki.title'),
-    type: 'input',
-    required: true,
-    placeholder: $t('wiki.placeholder.title'),
-  },
-  {
-    prop: 'categoryId',
-    label: $t('wiki.category'),
-    type: 'select',
-    required: false,
-    placeholder: $t('wiki.placeholder.category'),
-  },
-  {
-    prop: 'description',
-    label: $t('wiki.description'),
-    type: 'input',
-    required: false,
-    placeholder: $t('wiki.placeholder.description'),
-  },
-]);
-
-const wikiFormRules = computed(() => {
-  const rules: Record<string, any[]> = {};
-  wikiFieldDefinitions.value.forEach((field) => {
-    const fieldRules = [];
-    if (field.required) {
-      fieldRules.push({
-        required: true,
-        message: `${$t('message.required')}`,
-        trigger: 'blur',
-      });
-    }
-    if (fieldRules.length > 0) {
-      rules[field.prop] = fieldRules;
-    }
-  });
-  return rules;
-});
+const wikiFormRules = {
+  title: [
+    {
+      required: true,
+      message: `${$t('message.required')}`,
+      trigger: 'blur',
+    },
+  ],
+};
 
 function handleWikiSubmit() {
   wikiFormRef.value?.validate((valid) => {
@@ -448,21 +417,23 @@ function handleWikiSubmit() {
         :rules="wikiFormRules"
         label-width="120px"
       >
-        <ElFormItem
-          v-for="field in wikiFieldDefinitions"
-          :key="field.prop"
-          :label="field.label"
-          :prop="field.prop"
-        >
-          <ElInput
-            v-if="!field.type || field.type === 'input'"
-            v-model="wikiFormData[field.prop]"
-            :placeholder="field.placeholder"
+        <ElFormItem :label="$t('wiki.title')" prop="title">
+          <WikiOptimizer
+            class="mb-1"
+            v-model="wikiFormData.title"
+            field="title"
+            :type="wikiFormData.type"
+            :wiki-id="wikiFormData.id"
           />
+          <ElInput
+            v-model="wikiFormData.title"
+            :placeholder="$t('wiki.placeholder.title')"
+          />
+        </ElFormItem>
+        <ElFormItem :label="$t('wiki.category')" prop="categoryId">
           <ElSelect
-            v-else-if="field.type === 'select'"
-            v-model="wikiFormData[field.prop]"
-            :placeholder="field.placeholder"
+            v-model="wikiFormData.categoryId"
+            :placeholder="$t('wiki.placeholder.category')"
             clearable
             style="width: 100%"
           >
@@ -473,11 +444,23 @@ function handleWikiSubmit() {
               :value="item.id"
             />
           </ElSelect>
-          <ElInputNumber
-            v-else-if="field.type === 'number'"
-            v-model="wikiFormData[field.prop]"
-            :placeholder="field.placeholder"
-            style="width: 100%"
+        </ElFormItem>
+        <ElFormItem :label="$t('wiki.description')" prop="description">
+          <WikiOptimizer
+            class="mb-1"
+            v-model="wikiFormData.description"
+            field="description"
+            :type="wikiFormData.type"
+            :wiki-id="wikiFormData.id"
+          />
+          <ElInput
+            v-model="wikiFormData.description"
+            type="textarea"
+            :rows="8"
+            :maxlength="500"
+            show-word-limit
+            :placeholder="$t('wiki.placeholder.description')"
+            :style="{ height: '120px' }"
           />
         </ElFormItem>
       </ElForm>

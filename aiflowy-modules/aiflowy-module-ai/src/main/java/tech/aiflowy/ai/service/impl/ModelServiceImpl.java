@@ -23,8 +23,10 @@ import tech.aiflowy.ai.service.ModelProviderService;
 import tech.aiflowy.ai.service.ModelService;
 import tech.aiflowy.common.domain.Result;
 import tech.aiflowy.common.web.exceptions.BusinessException;
+import tech.aiflowy.system.entity.SysOption;
+import tech.aiflowy.system.service.SysOptionService;
 
-import javax.annotation.Resource;
+import jakarta.annotation.Resource;
 import java.math.BigInteger;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -43,7 +45,8 @@ public class ModelServiceImpl extends ServiceImpl<ModelMapper, Model> implements
 
     @Autowired
     ModelProviderService modelProviderService;
-
+    @Resource
+    private SysOptionService sysOptionService;
     @Resource
     private Cache<String, Object> cache;
 
@@ -220,5 +223,25 @@ public class ModelServiceImpl extends ServiceImpl<ModelMapper, Model> implements
         Model model = new Model();
         model.setWithUsed(entity.getWithUsed());
         modelMapper.updateByQuery(model, queryWrapper);
+    }
+
+    @Override
+    public Model getSystemModel() {
+        SysOption modelProviderName = sysOptionService.getByOptionKey("model_of_chat");
+        SysOption modelName = sysOptionService.getByOptionKey("chatgpt_model_name");
+        SysOption requestPath = sysOptionService.getByOptionKey("chatgpt_chatPath");
+        SysOption endpoint = sysOptionService.getByOptionKey("chatgpt_endpoint");
+        SysOption apiKey = sysOptionService.getByOptionKey("chatgpt_api_key");
+        ModelProvider modelProvider = new ModelProvider();
+        modelProvider.setProviderType(modelProviderName.getValue());
+        Model model = new Model();
+        model.setEndpoint(endpoint.getValue());
+        model.setApiKey(apiKey.getValue());
+        model.setModelType("chatModel");
+        model.setRequestPath(requestPath.getValue());
+        model.setModelProvider(modelProvider);
+        model.setModelName(modelName.getValue());
+        model.setModelProvider(modelProvider);
+        return model;
     }
 }

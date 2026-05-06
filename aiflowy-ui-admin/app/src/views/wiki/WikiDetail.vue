@@ -5,20 +5,26 @@ import { computed, onMounted, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 
 import { useAppConfig } from '@aiflowy/hooks';
+import { IconifyIcon } from '@aiflowy/icons';
 import { $t } from '@aiflowy/locales';
 import { useAccessStore } from '@aiflowy/stores';
 
 import {
   CirclePlus,
   Delete,
+  Download,
   Edit,
   FolderOpened,
+  MoreFilled,
   Plus,
   UploadFilled,
 } from '@element-plus/icons-vue';
 import {
   ElButton,
   ElDialog,
+  ElDropdown,
+  ElDropdownItem,
+  ElDropdownMenu,
   ElForm,
   ElFormItem,
   ElIcon,
@@ -27,8 +33,10 @@ import {
   ElMessageBox,
   ElOption,
   ElSelect,
+  ElSpace,
   ElTable,
   ElTableColumn,
+  ElText,
   ElTree,
   ElUpload,
 } from 'element-plus';
@@ -36,7 +44,9 @@ import { tryit } from 'radash';
 
 import { api } from '#/api/request';
 import PageData from '#/components/page/PageData.vue';
+import WikiOptimizer from '#/components/wiki/WikiOptimizer.vue';
 import { useDictStore } from '#/store';
+import { getFileType } from '#/utils/file';
 
 const route = useRoute();
 const wikiId = ref<string>((route.query.id as string) || '');
@@ -62,9 +72,17 @@ const selectedTreeNode = ref<any>(null);
 const treeNodeMap = new Map<string, any>();
 
 const loadNode = async (node: any, resolve: (data: any[]) => void) => {
-  const parentId = node.level === 0 ? wikiId.value : node.data.id;
+  if (node.level === 0) {
+    return resolve([
+      {
+        id: wikiId.value,
+        title: '全部',
+      },
+    ]);
+  }
+
   const [, res] = await tryit(api.get)('/api/v1/wiki/list', {
-    params: { type: 1, asTree: false, parentId },
+    params: { type: 1, asTree: false, parentId: node.data.id },
   });
   if (res && res.errorCode === 0) {
     const list = res.data || [];
@@ -170,8 +188,10 @@ function removeDir(node: any) {
               const parentNode = treeNodeMap.get(node.parentId);
               if (parentNode) {
                 refreshNode(node.parentId);
+                pageDataRef.value?.setQuery({ parentId: node.parentId });
               } else {
                 refreshRoot();
+                pageDataRef.value?.setQuery({ parentId: wikiId.value });
               }
               done();
             }
@@ -204,16 +224,20 @@ function handleDirSubmit() {
             const parentId = dirFormData.value.parentId;
             if (parentId === wikiId.value) {
               refreshRoot();
+              pageDataRef.value?.setQuery({ parentId: wikiId.value });
             } else {
               refreshNode(parentId);
+              pageDataRef.value?.setQuery({ parentId });
             }
           } else {
             // 新增：刷新父节点
             const parentId = dirFormData.value.parentId;
             if (parentId === wikiId.value) {
               refreshRoot();
+              pageDataRef.value?.setQuery({ parentId: wikiId.value });
             } else {
               refreshNode(parentId);
+              pageDataRef.value?.setQuery({ parentId });
             }
           }
         }
@@ -238,8 +262,12 @@ const currentContent = ref('');
 
 // 打开内容查看模态框
 function openContentView(row: any) {
-  currentContent.value = row.content || '';
-  contentViewVisible.value = true;
+  if (row.type === 1) {
+    handleTableRowClick(row);
+  } else {
+    currentContent.value = row.content || '';
+    contentViewVisible.value = true;
+  }
 }
 
 // 识别模式选项
@@ -315,15 +343,24 @@ function addDoc() {
 }
 
 function showDocDialog(row: any) {
-  docFormRef.value?.resetFields();
-  docFormData.value = { ...row };
-  docFileList.value = [];
-  uploadedFilePath.value = '';
-  isEditMode.value = true;
-  docDialogVisible.value = true;
+  if (row.type === 1) {
+    editDir(row);
+  } else {
+    docFormRef.value?.resetFields();
+    docFormData.value = { ...row };
+    docFileList.value = [];
+    uploadedFilePath.value = '';
+    isEditMode.value = true;
+    docDialogVisible.value = true;
+  }
 }
 
 function removeDoc(row: any) {
+  if (row.type === 1) {
+    removeDir(row);
+    return;
+  }
+
   ElMessageBox.confirm($t('message.deleteAlert'), $t('message.noticeTitle'), {
     confirmButtonText: $t('message.ok'),
     cancelButtonText: $t('message.cancel'),
@@ -361,7 +398,7 @@ const handleDocFileSuccess = (response: any) => {
 };
 
 // 文件状态变化回调
-const handleDocFileChange = (file: UploadFile, fileList: UploadFile[]) => {
+const handleDocFileChange = (_: UploadFile, fileList: UploadFile[]) => {
   docFileList.value = fileList;
 };
 
@@ -389,6 +426,46 @@ function handleDocSubmit() {
       });
     }
   });
+}
+
+async function handleTableRowClick(row: any) {
+  if (row.type === 1) {
+    // 获取目标节点
+    let node = treeRef.value?.getNode(row.id);
+
+    // 如果节点不存在，需要先展开父节点来加载它
+    if (!node) {
+      const parentNode = treeRef.value?.getNode(row.parentId);
+      if (parentNode) {
+        // 展开父节点以加载子节点
+        if (!parentNode.expanded) {
+          await new Promise<void>((resolve) => {
+            parentNode.expand(() => {
+              resolve();
+            });
+          });
+        }
+        // 展开后重新获取目标节点
+        node = treeRef.value?.getNode(row.id);
+      }
+    }
+
+    // 如果找到节点，展开它
+    if (node && !node.expanded) {
+      node.expand();
+    }
+
+    // 选中左侧树节点
+    treeRef.value?.setCurrentKey(row.id);
+    // 更新选中的树节点数据
+    selectedTreeNode.value = row;
+    // 更新右侧表格数据为该目录下的内容
+    pageDataRef.value?.setQuery({ parentId: row.id });
+  }
+}
+
+function downloadFile(fileUrl: string) {
+  window.open(fileUrl, '_blank');
 }
 
 // Watch route id
@@ -436,7 +513,10 @@ onMounted(() => {
         >
           <template #default="{ node, data }">
             <div class="group flex flex-1 items-center justify-between">
-              <span class="truncate">{{ node.label }}</span>
+              <ElSpace :size="4">
+                <ElIcon><FolderOpened /></ElIcon>
+                <span class="truncate">{{ node.label }}</span>
+              </ElSpace>
               <span
                 class="hidden items-center group-hover:inline-flex"
                 @click.stop
@@ -448,12 +528,14 @@ onMounted(() => {
                   @click="addChildDir(data)"
                 />
                 <ElButton
+                  class="!ml-0"
                   :icon="Edit"
                   size="small"
                   link
                   @click="editDir(data)"
                 />
                 <ElButton
+                  class="!ml-0"
                   :icon="Delete"
                   size="small"
                   link
@@ -485,66 +567,83 @@ onMounted(() => {
         page-url="/api/v1/wiki/page"
         :page-size="12"
         :page-sizes="[12, 24, 36, 48]"
-        :extra-query-params="{ type: 2, parentId: wikiId }"
+        :extra-query-params="{ parentId: wikiId }"
       >
         <template #default="{ pageList }">
-          <ElTable :data="pageList" border style="width: 100%">
-            <ElTableColumn prop="title" :label="$t('wiki.document.title')" />
-            <ElTableColumn prop="content" :label="$t('wiki.document.content')">
+          <ElTable
+            :data="pageList"
+            border
+            style="width: 100%"
+            @row-click="handleTableRowClick"
+          >
+            <ElTableColumn :label="$t('wiki.document.title')">
               <template #default="{ row }">
-                <ElButton link type="primary" @click="openContentView(row)">
-                  {{ $t('wiki.document.view') }}
-                </ElButton>
+                <ElSpace :size="4">
+                  <template v-if="row.type === 1">
+                    <ElIcon size="20"><FolderOpened /></ElIcon>
+                  </template>
+                  <template v-else>
+                    <ElIcon size="20">
+                      <IconifyIcon :icon="`svg:${getFileType(row.fileUrl)}`" />
+                    </ElIcon>
+                  </template>
+                  <span>{{ row.title }}</span>
+                </ElSpace>
               </template>
             </ElTableColumn>
-            <ElTableColumn
-              prop="recognitionMode"
-              :label="$t('wiki.recognition.mode')"
-              width="120"
-            >
+            <ElTableColumn :label="$t('wiki.description')">
               <template #default="{ row }">
-                {{
-                  dictStore.getDictLabel('recognitionMode', row.recognitionMode)
-                }}
-              </template>
-            </ElTableColumn>
-            <ElTableColumn
-              prop="taskStatus"
-              :label="$t('wiki.taskStatus')"
-              width="120"
-            >
-              <template #default="{ row }">
-                {{ dictStore.getDictLabel('ocrTaskStatus', row.taskStatus) }}
+                <ElText line-clamp="2">{{ row.description }}</ElText>
               </template>
             </ElTableColumn>
             <ElTableColumn
               prop="created"
-              :label="$t('wiki.document.createTime')"
               width="180"
+              :label="$t('wiki.document.createTime')"
             />
             <ElTableColumn
               :label="$t('common.handle')"
-              width="180"
+              width="90"
               align="right"
             >
               <template #default="{ row }">
-                <div class="flex items-center justify-end gap-2">
-                  <ElButton
-                    link
-                    type="primary"
-                    :icon="Edit"
-                    @click="showDocDialog(row)"
-                  >
-                    {{ $t('button.edit') }}
-                  </ElButton>
-                  <ElButton
-                    link
-                    type="danger"
-                    :icon="Delete"
-                    @click="removeDoc(row)"
-                  >
-                    {{ $t('button.delete') }}
-                  </ElButton>
+                <div class="flex items-center gap-3">
+                  <div class="flex items-center">
+                    <ElButton
+                      link
+                      type="primary"
+                      @click.stop="openContentView(row)"
+                    >
+                      {{ $t('button.view') }}
+                    </ElButton>
+                  </div>
+
+                  <ElDropdown>
+                    <ElButton link :icon="MoreFilled" />
+
+                    <template #dropdown>
+                      <ElDropdownMenu>
+                        <ElDropdownItem @click.stop="showDocDialog(row)">
+                          <ElButton link :icon="Edit">
+                            {{ $t('button.edit') }}
+                          </ElButton>
+                        </ElDropdownItem>
+                        <ElDropdownItem
+                          v-if="row.fileUrl && row.fileUrl.length > 0"
+                          @click.stop="downloadFile(row.fileUrl)"
+                        >
+                          <ElButton link :icon="Download">
+                            {{ $t('button.download') }}
+                          </ElButton>
+                        </ElDropdownItem>
+                        <ElDropdownItem @click.stop="removeDoc(row)">
+                          <ElButton link :icon="Delete" type="danger">
+                            {{ $t('button.delete') }}
+                          </ElButton>
+                        </ElDropdownItem>
+                      </ElDropdownMenu>
+                    </template>
+                  </ElDropdown>
                 </div>
               </template>
             </ElTableColumn>
@@ -566,14 +665,32 @@ onMounted(() => {
         label-width="100px"
       >
         <ElFormItem :label="$t('wiki.directory.name')" prop="title">
+          <WikiOptimizer
+            class="mb-1"
+            v-model="dirFormData.title"
+            field="title"
+            :type="dirFormData.type"
+            :wiki-id="dirFormData.id"
+          />
           <ElInput
             v-model="dirFormData.title"
             :placeholder="$t('wiki.directory.placeholder')"
           />
         </ElFormItem>
         <ElFormItem :label="$t('wiki.description')" prop="description">
+          <WikiOptimizer
+            class="mb-1"
+            v-model="dirFormData.description"
+            field="description"
+            :type="dirFormData.type"
+            :wiki-id="dirFormData.id"
+          />
           <ElInput
             v-model="dirFormData.description"
+            type="textarea"
+            :rows="8"
+            :maxlength="500"
+            show-word-limit
             :placeholder="$t('wiki.placeholder.description')"
           />
         </ElFormItem>
@@ -604,15 +721,41 @@ onMounted(() => {
         :rules="docFormRules"
         label-width="100px"
       >
-        <ElFormItem :label="$t('wiki.document.title')" prop="title">
+        <ElFormItem
+          v-if="isEditMode"
+          :label="$t('wiki.document.title')"
+          prop="title"
+        >
+          <WikiOptimizer
+            class="mb-1"
+            v-model="docFormData.title"
+            field="title"
+            :type="docFormData.type"
+            :wiki-id="docFormData.id"
+          />
           <ElInput
             v-model="docFormData.title"
             :placeholder="$t('wiki.document.placeholder')"
           />
         </ElFormItem>
-        <ElFormItem :label="$t('wiki.description')" prop="description">
+        <ElFormItem
+          v-if="isEditMode"
+          :label="$t('wiki.description')"
+          prop="description"
+        >
+          <WikiOptimizer
+            class="mb-1"
+            v-model="docFormData.description"
+            field="description"
+            :type="docFormData.type"
+            :wiki-id="docFormData.id"
+          />
           <ElInput
             v-model="docFormData.description"
+            type="textarea"
+            :rows="8"
+            :maxlength="500"
+            show-word-limit
             :placeholder="$t('wiki.placeholder.description')"
           />
         </ElFormItem>

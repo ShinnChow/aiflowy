@@ -6,8 +6,10 @@ import jakarta.annotation.Resource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
+import tech.aiflowy.admin.controller.wiki.event.WikiUpdateEvent;
 import tech.aiflowy.ai.agentsflex.ocrModel.OcrModel;
 import tech.aiflowy.ai.agentsflex.ocrModel.ParseResult;
 import tech.aiflowy.ai.entity.Model;
@@ -30,6 +32,8 @@ public class WikiTask {
     private ModelService modelService;
     @Value("${job.wiki.enabled:true}")
     private boolean enabled;
+    @Resource
+    private ApplicationEventPublisher publisher;
 
     @Scheduled(fixedDelay = 10000)
     public void queryTaskStatus() {
@@ -58,6 +62,10 @@ public class WikiTask {
             wiki.setTaskStatus(EnumOcrTaskStatus.COMPLETED.getCode());
             wiki.setContent(res.getContent());
             wikiService.updateById(wiki);
+            WikiUpdateEvent event = new WikiUpdateEvent();
+            event.setWikiId(wiki.getId());
+            event.setContent(res.getContent());
+            publisher.publishEvent(event);
         }
         if (EnumOcrTaskStatus.FAILED.getCode().equals(res.getStatus())) {
             wiki.setTaskStatus(EnumOcrTaskStatus.FAILED.getCode());

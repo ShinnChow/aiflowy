@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="43px" height="50px" viewBox="0 0 43 50" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <title>unknow</title>
+    <defs>
+        <path d="M4,0 L26,0 L26,0 L39,11 L39,44 C39,46.209139 37.209139,48 35,48 L4,48 C1.790861,48 -1.06172613e-15,46.209139 0,44 L0,4 C-2.705415e-16,1.790861 1.790861,-9.26455379e-16 4,0 Z" id="path-1"></path>
+        <linearGradient x1="50%" y1="42.1603731%" x2="18.0796887%" y2="86.369128%" id="linearGradient-3">
+            <stop stop-color="#EBEEEE" offset="0%"></stop>
+            <stop stop-color="#E1E5E6" offset="100%"></stop>
+        </linearGradient>
+        <path d="M26,0 L39,11 L30.026853,11.0602404 C27.8177638,11.075071 26.0149207,9.29627282 26.0000901,7.0871836 C26.00003,7.07823272 26,7.06928165 26,7.06033056 L26,0 L26,0 Z" id="path-4"></path>
+        <filter x="-53.8%" y="-45.1%" width="207.7%" height="226.0%" filterUnits="objectBoundingBox" id="filter-5">
+            <feOffset dx="0" dy="2" in="SourceAlpha" result="shadowOffsetOuter1"></feOffset>
+            <feGaussianBlur stdDeviation="2" in="shadowOffsetOuter1" result="shadowBlurOuter1"></feGaussianBlur>
+            <feColorMatrix values="0 0 0 0 0.809165654   0 0 0 0 0.816334001   0 0 0 0 0.836814991  0 0 0 1 0" type="matrix" in="shadowBlurOuter1"></feColorMatrix>
+        </filter>
+    </defs>
+    <g id="页面-1" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <g id="画板" transform="translate(-490, -162)">
+            <g id="unknow" transform="translate(490, 164)">
+                <g id="矩形">
+                    <mask id="mask-2" fill="white">
+                        <use xlink:href="#path-1"></use>
+                    </mask>
+                    <use id="蒙版" fill="#DADDE3" xlink:href="#path-1"></use>
+                    <g id="U" mask="url(#mask-2)" fill="#B8BBC2" fill-rule="nonzero">
+                        <g transform="translate(14.68, 16.12)" id="路径">
+                            <path d="M0,9.36 L0,0 L2.24,0 L2.24,8.98 C2.24,9.75333333 2.34,10.3666667 2.54,10.82 C2.74,11.2733333 3.07,11.6033333 3.53,11.81 C3.99,12.0166667 4.62666667,12.12 5.44,12.12 C6.28,12.12 6.93333333,12.0166667 7.4,11.81 C7.86666667,11.6033333 8.19333333,11.2766667 8.38,10.83 C8.56666667,10.3833333 8.66,9.76666667 8.66,8.98 L8.66,0 L10.88,0 L10.88,9.36 C10.88,11 10.4266667,12.1966667 9.52,12.95 C8.61333333,13.7033333 7.24666667,14.08 5.42,14.08 C3.58,14.08 2.21666667,13.7166667 1.33,12.99 C0.443333333,12.2633333 0,11.0533333 0,9.36 Z"></path>
+                        </g>
+                    </g>
+                    <rect fill="#B6B8C0" mask="url(#mask-2)" x="0" y="38" width="39" height="10"></rect>
+                    <text id="Unknow" mask="url(#mask-2)" font-family="AlibabaPuHuiTi_2_65_Medium, Alibaba PuHuiTi 2.0" font-size="6" font-weight="400" fill="#FFFFFF">
+                        <tspan x="7" y="45">Unknow</tspan>
+                    </text>
+                </g>
+                <g id="矩形">
+                    <use fill="black" fill-opacity="1" filter="url(#filter-5)" xlink:href="#path-4"></use>
+                    <use fill="url(#linearGradient-3)" fill-rule="evenodd" xlink:href="#path-4"></use>
+                </g>
+            </g>
+        </g>
+    </g>
+</svg>

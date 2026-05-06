@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="16px" height="15.1083105px" viewBox="0 0 16 15.1083105" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <title>annotation-task</title>
+    <g id="页面-1" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <g id="数据集" transform="translate(-56, -459.8917)">
+            <g id="编组-8备份" transform="translate(12, 447)">
+                <g id="编组-17备份" transform="translate(44, 12)">
+                    <rect id="矩形" x="0" y="0" width="16" height="15.9999997"></rect>
+                    <path d="M9.90678744,1.66287638 L2.96199599,8.18739291 C2.79728689,8.34213438 2.68984994,8.5481048 2.65719827,8.77172921 L2.3276248,11.0289087 C2.24783113,11.5753988 2.62616333,12.0831021 3.17265341,12.1628957 C3.21931978,12.1697096 3.26640972,12.1732136 3.31357061,12.1733816 L5.63879847,12.1816641 C5.89703517,12.182584 6.14561598,12.083569 6.33249756,11.9053492 L13.3329133,5.22939406 C13.73259,4.84824189 13.7476071,4.21525502 13.366455,3.81557832 C13.3644634,3.81348997 13.3624628,3.81141026 13.3604533,3.80933923 L11.3091745,1.69531575 C10.9289558,1.30346687 10.3047179,1.28902729 9.90678744,1.66287638 Z" id="路径-13" stroke="currentColor"></path>
+                    <rect id="矩形" stroke="currentColor" fill="currentColor" x="1.5" y="14.5" width="13" height="1"></rect>
+                    <rect id="矩形" stroke="currentColor" fill="currentColor" x="0.5" y="13.5" width="1" height="2" rx="0.5"></rect>
+                    <rect id="矩形备份" stroke="currentColor" fill="currentColor" x="15.5" y="13.5" width="1" height="2" rx="0.5"></rect>
+                </g>
+            </g>
+        </g>
+    </g>
+</svg>
