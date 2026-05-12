@@ -23,6 +23,12 @@ import java.util.Map;
 
 public class JobUtil {
 
+    private static final String ALLOWED_PACKAGE = "tech.aiflowy";
+
+    private static boolean isAllowedPackage(String className) {
+        return className != null && className.startsWith(ALLOWED_PACKAGE);
+    }
+
     /**
      * sysJobService.test()
      */
@@ -34,6 +40,10 @@ public class JobUtil {
             Object bean = SpringContextUtil.getBean(strings[0]);
             String param = StrUtil.subBetween(beanMethod, "(", ")");
             try {
+                String className = bean.getClass().getName();
+                if (!isAllowedPackage(className)) {
+                    throw new SecurityException("非法的Bean访问: " + className + "，只允许访问 tech.aiflowy 包下的类");
+                }
                 // 调用方法并传递参数
                 return invoke(bean, strings[1], getParams(param));
             } catch (Exception e) {
@@ -57,6 +67,9 @@ public class JobUtil {
                 String className = String.join(".", Arrays.copyOf(strings, strings.length - 1));
                 String methodName = strings[strings.length - 1];
                 String param = StrUtil.subBetween(javaMethod, "(", ")");
+                if (!isAllowedPackage(className)) {
+                    throw new SecurityException("非法的类访问: " + className + "，只允许访问 tech.aiflowy 包下的类");
+                }
                 Object obj = Class.forName(className).getDeclaredConstructor().newInstance();;
                 return invoke(obj, methodName, getParams(param));
             } catch (Exception e) {
