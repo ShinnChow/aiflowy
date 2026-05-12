@@ -42,7 +42,7 @@ public class JobUtil {
             try {
                 String className = bean.getClass().getName();
                 if (!isAllowedPackage(className)) {
-                    throw new SecurityException("非法的Bean访问: " + className + "，只允许访问 tech.aiflowy 包下的类");
+                    throw new SecurityException("非法访问: " + className);
                 }
                 // 调用方法并传递参数
                 return invoke(bean, strings[1], getParams(param));
@@ -68,7 +68,7 @@ public class JobUtil {
                 String methodName = strings[strings.length - 1];
                 String param = StrUtil.subBetween(javaMethod, "(", ")");
                 if (!isAllowedPackage(className)) {
-                    throw new SecurityException("非法的类访问: " + className + "，只允许访问 tech.aiflowy 包下的类");
+                    throw new SecurityException("非法访问: " + className);
                 }
                 Object obj = Class.forName(className).getDeclaredConstructor().newInstance();;
                 return invoke(obj, methodName, getParams(param));
