@@ -622,8 +622,8 @@ const handleAddWiki = () => {
           </ElCol>
           <ElCol class="options-config-item-middle">
             <ElSlider
-              :min="1024"
-              :max="20000"
+              :min="10000"
+              :max="200000"
               :step="1000"
               :disabled="!hasSavePermission"
               v-model="llmConfig.maxReplyLength"
@@ -635,8 +635,8 @@ const handleAddWiki = () => {
           </ElCol>
           <ElCol class="options-config-item-right">
             <ElInputNumber
-              :min="1024"
-              :max="20000"
+              :min="10000"
+              :max="200000"
               :step="1000"
               :disabled="!hasSavePermission"
               v-model="llmConfig.maxReplyLength"

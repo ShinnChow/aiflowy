@@ -272,7 +272,7 @@ public class BotController extends BaseCurdController<BotService, Bot> {
         Map<String, Object> defaultLlmOptions = new HashMap<>();
         defaultLlmOptions.put("temperature", 0.7);
         defaultLlmOptions.put("topK", 4);
-        defaultLlmOptions.put("maxReplyLength", 2048);
+        defaultLlmOptions.put("maxReplyLength", 20000);
         defaultLlmOptions.put("topP", 0.7);
         defaultLlmOptions.put("maxMessageCount", 10);
         return defaultLlmOptions;

@@ -86,7 +86,7 @@ CREATE TABLE `tb_bot_message`
     `account_id`      bigint UNSIGNED NULL DEFAULT NULL COMMENT '关联的账户ID',
     `conversation_id` bigint UNSIGNED NULL DEFAULT NULL COMMENT '会话ID',
     `role`            varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '角色[user|assistant]',
-    `content`         text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL COMMENT '内容',
+    `content`         longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL COMMENT '内容',
     `image`           varchar(256) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '图片',
     `options`         text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL COMMENT '选项',
     `created`         datetime NULL DEFAULT NULL COMMENT '创建时间',
