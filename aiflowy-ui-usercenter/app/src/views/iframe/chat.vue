@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, useTemplateRef } from 'vue';
+import { useRoute } from 'vue-router';
 
+import { updatePreferences } from '@aiflowy/preferences';
 import { cloneDeep } from '@aiflowy/utils';
 
 import { ElAvatar, ElButton, ElContainer, ElMain } from 'element-plus';
@@ -9,20 +11,10 @@ import { api } from '#/api/request';
 import defaultAssistantAvatar from '#/assets/defaultAssistantAvatar.svg';
 import { ChatBubbleList, ChatContainer, ChatSender } from '#/components/chat';
 
-onMounted(() => {
-  getAssistantList();
-});
+const route = useRoute();
+const queryBotId = ref<string>((route.query.botId as string) || '');
 const recentUsedAssistant = ref<any[]>([]);
 const currentBot = ref<any>({});
-
-function getAssistantList() {
-  api.get('/userCenter/botRecentlyUsed/getRecentlyBot').then((res) => {
-    recentUsedAssistant.value = res.data;
-    if (recentUsedAssistant.value.length > 0) {
-      currentBot.value = recentUsedAssistant.value[0];
-    }
-  });
-}
 const messageList = ref<any>([]);
 const bubbleListRef = useTemplateRef<any>('bubbleListRef');
 const presetMessage = ref('');
@@ -33,6 +25,114 @@ const showQuestions = computed(() => {
   );
   return list.length === 0;
 });
+
+onMounted(() => {
+  updateTheme();
+  getAssistantList();
+  window.addEventListener('pageshow', updateTheme);
+});
+
+function updateTheme(event?: PageTransitionEvent) {
+  const params = getUrlParams();
+  const theme: any = {};
+
+  if (params.primaryColor) {
+    theme.colorPrimary = params.primaryColor;
+  }
+  if (params.dark) {
+    theme.mode = params.dark === 'true' ? 'dark' : 'light';
+  }
+
+  if (Object.keys(theme).length > 0) {
+    if (!event) {
+      updatePreferences({ theme });
+    } else if (event.persisted) {
+      updatePreferences({ theme });
+    }
+  }
+}
+function getUrlParams() {
+  const params: any = {};
+  const queryString = window.location.href.split('?')[1];
+
+  if (!queryString) {
+    return params;
+  }
+
+  if (queryString) {
+    const pairs = queryString.split('&');
+
+    pairs.forEach((pair) => {
+      const [key, value] = pair.split('=');
+      params[decodeURIComponent(key!)] = decodeURIComponent(value || '');
+    });
+  }
+
+  return params;
+}
+function updateQueryWithoutReload(params: any) {
+  const hash = window.location.hash;
+
+  if (hash && hash.startsWith('#/')) {
+    // 解析当前的 hash 路由和参数
+    const [hashPath, queryString] = hash.slice(1).split('?');
+    const query = new URLSearchParams(queryString || '');
+
+    // 更新参数
+    Object.keys(params).forEach((key) => {
+      if (params[key] === null || params[key] === undefined) {
+        query.delete(key);
+      } else {
+        query.set(key, params[key]);
+      }
+    });
+
+    // 构建新的 hash
+    const newQuery = query.toString();
+    const newHash = `#${hashPath}${newQuery ? `?${newQuery}` : ''}`;
+
+    // 更新 URL
+    window.history.pushState({}, '', newHash);
+  } else {
+    // 非 hash 路由模式的处理
+    const url = new URL(window.location.href);
+
+    Object.keys(params).forEach((key) => {
+      if (params[key] === null || params[key] === undefined) {
+        url.searchParams.delete(key);
+      } else {
+        url.searchParams.set(key, params[key]);
+      }
+    });
+
+    window.history.pushState({}, '', url.toString());
+  }
+}
+function handleSessionChange(session: any) {
+  if (!session?.id) {
+    return;
+  }
+  const query = getUrlParams();
+  updateQueryWithoutReload({
+    ...query,
+    sessionId: session.id,
+  });
+}
+function getAssistantList() {
+  api.get('/userCenter/botRecentlyUsed/getRecentlyBot').then((res) => {
+    recentUsedAssistant.value = res.data;
+    if (recentUsedAssistant.value.length > 0) {
+      if (queryBotId.value) {
+        const targetItem = recentUsedAssistant.value.find(
+          (item: any) => item.id === queryBotId.value,
+        );
+        currentBot.value = targetItem || recentUsedAssistant.value[0];
+      } else {
+        currentBot.value = recentUsedAssistant.value[0];
+      }
+    }
+  });
+}
 const getPerQuestions = (presetQuestions: any[]) => {
   if (!presetQuestions) {
     return [];
@@ -102,6 +202,8 @@ function setMessageList(messages: any) {
         class="border-none"
         :bot="currentBot"
         :on-message-list="setMessageList"
+        :on-session-change="handleSessionChange"
+        :get-url-params="getUrlParams"
       >
         <template #default="{ conversationId }">
           <div
