@@ -27,6 +27,7 @@ import tech.aiflowy.common.web.controller.BaseCurdController;
 import tech.aiflowy.common.web.exceptions.BusinessException;
 import tech.aiflowy.common.web.jsonbody.JsonBody;
 import tech.aiflowy.system.service.SysApiKeyService;
+import tech.aiflowy.system.service.SysOptionService;
 
 import javax.annotation.Resource;
 import java.io.InputStream;
@@ -56,6 +57,8 @@ public class WorkflowController extends BaseCurdController<WorkflowService, Work
     private ChainParser chainParser;
     @Resource
     private TinyFlowService tinyFlowService;
+    @Resource
+    private SysOptionService sysOptionService;
 
     public WorkflowController(WorkflowService service, ModelService modelService) {
         super(service);
@@ -97,7 +100,8 @@ public class WorkflowController extends BaseCurdController<WorkflowService, Work
         if (StpUtil.isLogin()) {
             variables.put(Constants.LOGIN_USER_KEY, SaTokenUtil.getLoginAccount());
         }
-        String executeId = chainExecutor.executeAsync(id.toString(), variables);
+        Map<String, Object> envVariables = sysOptionService.getEnvVariables();
+        String executeId = chainExecutor.executeAsync(id.toString(), variables, envVariables);
         return Result.ok(executeId);
     }
 

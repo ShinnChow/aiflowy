@@ -5,11 +5,13 @@ import { onMounted, ref, useTemplateRef } from 'vue';
 
 import { $t } from '@aiflowy/locales';
 
+import { Delete, Plus } from '@element-plus/icons-vue';
 import {
   ElAlert,
   ElButton,
   ElForm,
   ElFormItem,
+  ElIcon,
   ElInput,
   ElMessage,
   ElOption,
@@ -38,13 +40,23 @@ function getBrands() {
 function getOptions() {
   api
     .get(
-      '/api/v1/sysOption/list?keys=model_of_chat&keys=chatgpt_endpoint&keys=chatgpt_chatPath&keys=chatgpt_api_key&keys=chatgpt_model_name&keys=user_center_domain',
+      '/api/v1/sysOption/list?keys=model_of_chat&keys=chatgpt_endpoint&keys=chatgpt_chatPath&keys=chatgpt_api_key&keys=chatgpt_model_name&keys=user_center_domain&keys=env_variables',
     )
     .then((res) => {
       if (res.errorCode === 0) {
-        const { user_center_domain, ...rest } = res.data;
+        const { user_center_domain, env_variables, ...rest } = res.data;
         entity.value = rest;
         userCenter.value.user_center_domain = user_center_domain;
+        // 解析env_variables，如果不存在或解析失败则使用空对象
+        try {
+          const parsed = env_variables ? JSON.parse(env_variables) : {};
+          envVariables.value = Object.entries(parsed).map(([key, value]) => ({
+            key,
+            value: String(value),
+          }));
+        } catch {
+          envVariables.value = [];
+        }
       }
     });
 }
@@ -88,7 +100,35 @@ function handleSave(data?: Record<string, any>) {
 }
 
 // 用户中心设置
-const activeName = ref<'ai' | 'usercenter'>('ai');
+const activeName = ref<'ai' | 'envvariables' | 'usercenter'>('ai');
+
+// 系统变量设置
+interface EnvVariable {
+  key: string;
+  value: string;
+}
+const envVariables = ref<EnvVariable[]>([]);
+
+function addEnvVariable() {
+  envVariables.value.push({ key: '', value: '' });
+}
+
+function removeEnvVariable(index: number) {
+  envVariables.value.splice(index, 1);
+}
+
+function handleEnvVariablesSave() {
+  // 过滤掉key为空的项，并转换为对象格式
+  const validVariables = envVariables.value.filter(
+    (item) => item.key.trim() !== '',
+  );
+  const envVariablesObj: Record<string, string> = {};
+  validVariables.forEach((item) => {
+    envVariablesObj[item.key.trim()] = item.value;
+  });
+
+  handleSave({ env_variables: JSON.stringify(envVariablesObj) });
+}
 const userCenterFormEl = useTemplateRef('userCenterForm');
 const userCenter = ref({
   user_center_domain: '',
@@ -191,6 +231,40 @@ async function handleUserCenterSave() {
           </ElForm>
           <div class="settings-button-container">
             <ElButton type="primary" @click="handleUserCenterSave">
+              {{ $t('button.save') }}
+            </ElButton>
+          </div>
+        </ElTabPane>
+
+        <ElTabPane label="系统变量" name="envvariables">
+          <ElForm class="demo-form-inline" label-position="top">
+            <div
+              v-for="(item, index) in envVariables"
+              :key="index"
+              class="env-variable-row"
+            >
+              <ElFormItem label="Key" class="env-variable-item">
+                <ElInput v-model="item.key" clearable placeholder="变量名" />
+              </ElFormItem>
+              <ElFormItem label="Value" class="env-variable-item">
+                <ElInput v-model="item.value" clearable placeholder="变量值" />
+              </ElFormItem>
+              <ElButton
+                class="env-variable-delete"
+                type="danger"
+                text
+                @click="removeEnvVariable(index)"
+              >
+                <ElIcon><Delete /></ElIcon>
+              </ElButton>
+            </div>
+            <ElButton type="primary" text @click="addEnvVariable">
+              <ElIcon class="mr-1"><Plus /></ElIcon>
+              添加变量
+            </ElButton>
+          </ElForm>
+          <div class="settings-button-container">
+            <ElButton type="primary" @click="handleEnvVariablesSave">
               {{ $t('button.save') }}
             </ElButton>
           </div>

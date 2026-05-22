@@ -17,6 +17,7 @@ import tech.aiflowy.common.domain.Result;
 import tech.aiflowy.common.satoken.util.SaTokenUtil;
 import tech.aiflowy.common.web.controller.BaseCurdController;
 import tech.aiflowy.common.web.jsonbody.JsonBody;
+import tech.aiflowy.system.service.SysOptionService;
 
 import javax.annotation.Resource;
 import java.io.Serializable;
@@ -37,6 +38,8 @@ public class UcWorkflowController extends BaseCurdController<WorkflowService, Wo
     private ChainParser chainParser;
     @Resource
     private TinyFlowService tinyFlowService;
+    @Resource
+    private SysOptionService sysOptionService;
 
     public UcWorkflowController(WorkflowService service) {
         super(service);
@@ -77,7 +80,8 @@ public class UcWorkflowController extends BaseCurdController<WorkflowService, Wo
         if (StpUtil.isLogin()) {
             variables.put(Constants.LOGIN_USER_KEY, SaTokenUtil.getLoginAccount());
         }
-        String executeId = chainExecutor.executeAsync(id.toString(), variables);
+        Map<String, Object> envVariables = sysOptionService.getEnvVariables();
+        String executeId = chainExecutor.executeAsync(id.toString(), variables, envVariables);
         return Result.ok(executeId);
     }
 
