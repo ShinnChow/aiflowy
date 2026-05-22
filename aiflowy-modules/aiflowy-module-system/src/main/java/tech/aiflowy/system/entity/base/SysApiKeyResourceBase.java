@@ -29,6 +29,12 @@ public class SysApiKeyResourceBase implements Serializable {
     @Column(comment = "标题")
     private String title;
 
+    /**
+     * 分组
+     */
+    @Column(comment = "分组")
+    private String groupName;
+
     public BigInteger getId() {
         return id;
     }
@@ -51,6 +57,14 @@ public class SysApiKeyResourceBase implements Serializable {
 
     public void setTitle(String title) {
         this.title = title;
+    }
+
+    public String getGroupName() {
+        return groupName;
+    }
+
+    public void setGroupName(String groupName) {
+        this.groupName = groupName;
     }
 
 }

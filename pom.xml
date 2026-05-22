@@ -43,9 +43,23 @@
         <netty.version>4.1.130.Final</netty.version>
         <netty.version>4.1.130.Final</netty.version>
         <java-wkhtmltopdf-wrapper.version>1.3.0-RELEASE</java-wkhtmltopdf-wrapper.version>
+        <springdoc.version>2.8.17</springdoc.version>
+        <therapi-javadoc.version>0.15.0</therapi-javadoc.version>
     </properties>
     <dependencyManagement>
         <dependencies>
+
+            <dependency>
+                <groupId>org.springdoc</groupId>
+                <artifactId>springdoc-openapi-starter-webmvc-api</artifactId>
+                <version>${springdoc.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.github.therapi</groupId>
+                <artifactId>therapi-runtime-javadoc</artifactId>
+                <version>${therapi-javadoc.version}</version>
+            </dependency>
 
             <dependency>
                 <groupId>jakarta.validation</groupId>
@@ -463,6 +477,19 @@
                     <compilerArgs>
                         <arg>-parameters</arg>
                     </compilerArgs>
+                    <annotationProcessorPaths>
+                        <path>
+                            <groupId>com.github.therapi</groupId>
+                            <artifactId>therapi-runtime-javadoc-scribe</artifactId>
+                            <version>${therapi-javadoc.version}</version>
+                        </path>
+                        <path>
+                            <groupId>com.mybatis-flex</groupId>
+                            <artifactId>mybatis-flex-processor</artifactId>
+                            <version>${mybatis-flex.version}</version>
+                        </path>
+                    </annotationProcessorPaths>
+                    <fork>true</fork>
                 </configuration>
             </plugin>
             <plugin>

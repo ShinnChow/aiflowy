@@ -1,35 +1,149 @@
 package tech.aiflowy.publicapi;
 
-import com.github.javaparser.StaticJavaParser;
-import com.github.javaparser.ast.CompilationUnit;
-import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
-import com.github.javaparser.ast.expr.AnnotationExpr;
-import com.github.javaparser.ast.expr.MemberValuePair;
-import com.github.javaparser.ast.expr.NormalAnnotationExpr;
-import com.github.javaparser.ast.expr.SingleMemberAnnotationExpr;
+import cn.hutool.http.HttpUtil;
+import cn.hutool.json.JSONArray;
+import cn.hutool.json.JSONObject;
+import cn.hutool.json.JSONUtil;
 import com.mybatisflex.core.MybatisFlexBootstrap;
 import com.mybatisflex.core.query.QueryWrapper;
 import com.zaxxer.hikari.HikariDataSource;
 import tech.aiflowy.system.entity.SysApiKeyResource;
 import tech.aiflowy.system.mapper.SysApiKeyResourceMapper;
 
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
-import java.util.Optional;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
+import java.util.Map;
 
 /**
- * 同步接口到数据库
+ * 同步 SpringDoc 接口数据到数据库
+ * 先启动项目，再运行此程序
  */
 public class SyncApis {
 
     public static void main(String[] args) throws Exception {
+        // 获取 SpringDoc 的 OpenAPI JSON 数据
+        String apiDocsJson = HttpUtil.get("http://localhost:8080/v3/api-docs/public-api");
+        System.out.println("获取到的 API 文档数据:");
+        System.out.println(apiDocsJson);
+        // 解析并同步到数据库
+        syncApisToDatabase(apiDocsJson);
+    }
 
+    /**
+     * 解析 OpenAPI JSON 数据并同步到数据库
+     */
+    public static void syncApisToDatabase(String apiDocsJson) throws Exception {
+        // 解析 JSON
+        JSONObject openApiDoc = JSONUtil.parseObj(apiDocsJson);
+
+        // 提取 tags 信息（用于获取分组描述）
+        Map<String, String> tagDescriptionMap = extractTagDescriptions(openApiDoc);
+
+        // 提取 paths 信息
+        List<SysApiKeyResource> apiResources = extractApiResources(openApiDoc, tagDescriptionMap);
+
+        // 保存到数据库
+        saveToDatabase(apiResources);
+    }
+
+    /**
+     * 提取 tags 信息，建立 name -> description（优先）或 name 的映射
+     */
+    private static Map<String, String> extractTagDescriptions(JSONObject openApiDoc) {
+        Map<String, String> tagMap = new HashMap<>();
+
+        JSONArray tags = openApiDoc.getJSONArray("tags");
+        if (tags != null) {
+            for (int i = 0; i < tags.size(); i++) {
+                JSONObject tag = tags.getJSONObject(i);
+                String name = tag.getStr("name");
+                String description = tag.getStr("description");
+
+                // 优先使用 description，如果为空则使用 name
+                String groupName = (description != null && !description.trim().isEmpty())
+                        ? description.trim()
+                        : name;
+
+                tagMap.put(name, groupName);
+            }
+        }
+
+        return tagMap;
+    }
+
+    /**
+     * 提取所有 API 资源信息
+     */
+    private static List<SysApiKeyResource> extractApiResources(
+            JSONObject openApiDoc,
+            Map<String, String> tagDescriptionMap) {
+
+        List<SysApiKeyResource> resources = new ArrayList<>();
+
+        // 获取 paths 对象
+        JSONObject paths = openApiDoc.getJSONObject("paths");
+        if (paths == null) {
+            return resources;
+        }
+
+        // 遍历所有路径
+        for (String path : paths.keySet()) {
+            JSONObject pathItem = paths.getJSONObject(path);
+
+            // 遍历该路径下的所有 HTTP 方法
+            for (String method : pathItem.keySet()) {
+                // 跳过非操作字段（如 parameters）
+                if ("parameters".equals(method)) {
+                    continue;
+                }
+
+                JSONObject operation = pathItem.getJSONObject(method);
+                if (operation == null) {
+                    continue;
+                }
+
+                SysApiKeyResource resource = new SysApiKeyResource();
+
+                // 设置请求接口路径
+                resource.setRequestInterface(path);
+
+                // 获取操作描述（summary 或 description）
+                String title = operation.getStr("summary");
+                if (title == null || title.trim().isEmpty()) {
+                    title = operation.getStr("description");
+                }
+                resource.setTitle(title != null ? title.trim() : "");
+
+                // 获取分组信息（从 tags 中取第一个 tag）
+                JSONArray operationTags = operation.getJSONArray("tags");
+                if (operationTags != null && !operationTags.isEmpty()) {
+                    String firstTagName = operationTags.getStr(0);
+                    // 从 tagDescriptionMap 获取分组名称（description 优先）
+                    String groupName = tagDescriptionMap.getOrDefault(firstTagName, firstTagName);
+                    resource.setGroupName(groupName);
+                } else {
+                    resource.setGroupName("");
+                }
+
+                resources.add(resource);
+
+                // 打印解析结果
+                System.out.println("--------------------------------");
+                System.out.println("  HTTP方法: " + method.toUpperCase());
+                System.out.println("  接口路径: " + path);
+                System.out.println("  标题: " + resource.getTitle());
+                System.out.println("  分组: " + resource.getGroupName());
+            }
+        }
+
+        return resources;
+    }
+
+    /**
+     * 保存 API 资源到数据库
+     */
+    private static void saveToDatabase(List<SysApiKeyResource> resources) throws Exception {
         try (HikariDataSource dataSource = new HikariDataSource()) {
             dataSource.setJdbcUrl("jdbc:mysql://192.168.2.10:3306/aiflowy-v2?useInformationSchema=true&characterEncoding=utf-8");
             dataSource.setUsername("root");
@@ -41,148 +155,34 @@ public class SyncApis {
             bootstrap.start();
 
             SysApiKeyResourceMapper mapper = bootstrap.getMapper(SysApiKeyResourceMapper.class);
-            String dir = System.getProperty("user.dir") + "/aiflowy-api/aiflowy-api-public/src/main/java/tech/aiflowy/publicapi/controller";
-            List<String> filePath = getAllFilePaths(dir);
-            for (String path : filePath) {
-                extractCommentsFromFile(path, mapper);
+
+            int inserted = 0;
+            int updated = 0;
+
+            for (SysApiKeyResource resource : resources) {
+                // 查询是否已存在该接口
+                QueryWrapper wrapper = QueryWrapper.create();
+                wrapper.eq(SysApiKeyResource::getRequestInterface, resource.getRequestInterface());
+                SysApiKeyResource existing = mapper.selectOneByQuery(wrapper);
+
+                if (existing != null) {
+                    // 更新现有记录
+                    existing.setTitle(resource.getTitle());
+                    existing.setGroupName(resource.getGroupName());
+                    mapper.insertOrUpdate(existing);
+                    updated++;
+                } else {
+                    // 插入新记录
+                    mapper.insert(resource);
+                    inserted++;
+                }
             }
-        }
-    }
-
-    public static List<String> getAllFilePaths(String directoryPath) throws IOException {
-        Path startPath = Paths.get(directoryPath);
-
-        try (Stream<Path> stream = Files.walk(startPath)) {
-            return stream
-                    .filter(Files::isRegularFile)      // 只获取文件，排除目录
-                    .map(Path::toAbsolutePath)         // 转换为绝对路径
-                    .map(Path::toString)               // 转换为字符串
-                    .collect(Collectors.toList());
-        }
-    }
-
-    public static void extractCommentsFromFile(String filePath, SysApiKeyResourceMapper mapper) throws Exception {
-        System.out.println("正在解析文件: " + filePath);
-        FileInputStream in = new FileInputStream(filePath);
-        com.github.javaparser.JavaParser parser = new com.github.javaparser.JavaParser();
-        parser.getParserConfiguration().setLanguageLevel(com.github.javaparser.ParserConfiguration.LanguageLevel.JAVA_17);
-        CompilationUnit cu = parser.parse(in).getResult().orElseThrow();
-
-        cu.findAll(ClassOrInterfaceDeclaration.class).forEach(c -> {
-            // 1. 获取类级别的 RequestMapping 路径
-            String classPath = "";
-            Optional<AnnotationExpr> classMapping = c.getAnnotationByName("RequestMapping");
-            if (classMapping.isPresent()) {
-                classPath = getAnnotationValue(classMapping.get());
-            }
-
-            String finalClassPath = classPath; //用于lambda中使用
-            String className = c.getNameAsString();
-            String classComment = c.getJavadoc().map(d -> d.getDescription().toText()).orElse("");
 
             System.out.println("=========================================");
-            System.out.println("类名: " + className);
-            System.out.println("类注释: " + classComment);
-            System.out.println("类路径: " + finalClassPath);
-
-            // 2. 遍历方法
-            c.getMethods().forEach(method -> {
-                // 查找常见的 Mapping 注解
-                String[] mappingTypes = {"GetMapping", "PostMapping", "PutMapping", "DeleteMapping", "PatchMapping", "RequestMapping"};
-
-                for (String mappingType : mappingTypes) {
-                    Optional<AnnotationExpr> methodMapping = method.getAnnotationByName(mappingType);
-                    if (methodMapping.isPresent()) {
-                        // 获取方法上的路径
-                        String methodPath = getAnnotationValue(methodMapping.get());
-
-                        // 拼接完整 URI
-                        String fullUri = combinePaths(finalClassPath, methodPath);
-
-                        // 获取请求方式 (如果是 RequestMapping，通常默认为 All 或者需要进一步解析 method 属性，这里简单处理)
-                        String httpMethod = mappingType.replace("Mapping", "").toUpperCase();
-                        if (httpMethod.equals("REQUEST")) httpMethod = "ALL";
-
-                        // 获取方法注释
-                        String methodComment = method.getJavadoc().map(doc -> doc.getDescription().toText()).orElse("");
-
-                        System.out.println("--------------------------------");
-                        System.out.println("  方法名: " + method.getNameAsString());
-                        System.out.println("  类型: " + httpMethod);
-                        System.out.println("  完整URI: " + fullUri);
-                        System.out.println("  方法注释: " + methodComment);
-
-                        // 可以在这里调用 mapper 存入数据库
-                        QueryWrapper w = QueryWrapper.create();
-                        w.eq(SysApiKeyResource::getRequestInterface, fullUri);
-                        SysApiKeyResource record = mapper.selectOneByQuery(w);
-                        if (record != null) {
-                            record.setTitle(methodComment);
-                            mapper.insertOrUpdate(record);
-                        } else {
-                            record = new SysApiKeyResource();
-                            record.setRequestInterface(fullUri);
-                            record.setTitle(methodComment);
-                            mapper.insert(record);
-                        }
-                    }
-                }
-            });
-        });
-    }
-
-    /**
-     * 解析注解中的 value 或 path 值
-     * 处理几种情况:
-     * 1. @GetMapping("/api") -> SingleMemberAnnotationExpr
-     * 2. @GetMapping(value = "/api") -> NormalAnnotationExpr
-     * 3. @GetMapping(path = "/api") -> NormalAnnotationExpr
-     * 4. @GetMapping -> 默认为空字符串
-     */
-    private static String getAnnotationValue(AnnotationExpr annotation) {
-        // 情况 1: @GetMapping("/path")
-        if (annotation instanceof SingleMemberAnnotationExpr) {
-            String value = ((SingleMemberAnnotationExpr) annotation).getMemberValue().toString();
-            return removeQuotes(value);
+            System.out.println("同步完成！");
+            System.out.println("  新增: " + inserted + " 条");
+            System.out.println("  更新: " + updated + " 条");
+            System.out.println("  总计: " + resources.size() + " 条");
         }
-        // 情况 2: @GetMapping(value="/path") 或 @GetMapping(path="/path")
-        else if (annotation instanceof NormalAnnotationExpr) {
-            NormalAnnotationExpr normal = (NormalAnnotationExpr) annotation;
-            for (MemberValuePair pair : normal.getPairs()) {
-                String key = pair.getNameAsString();
-                if ("value".equals(key) || "path".equals(key)) {
-                    return removeQuotes(pair.getValue().toString());
-                }
-            }
-        }
-        // 情况 3: @GetMapping (没有参数)
-        return "";
-    }
-
-    /**
-     * 去除 JavaParser 解析出的字符串中的双引号
-     */
-    private static String removeQuotes(String value) {
-        if (value == null) return "";
-        return value.replace("\"", "").trim();
-    }
-
-    /**
-     * 拼接类路径和方法路径，处理斜杠
-     */
-    private static String combinePaths(String classPath, String methodPath) {
-        if (classPath == null) classPath = "";
-        if (methodPath == null) methodPath = "";
-
-        // 确保以 / 开头
-        if (!classPath.startsWith("/") && !classPath.isEmpty()) classPath = "/" + classPath;
-        if (!methodPath.startsWith("/") && !methodPath.isEmpty()) methodPath = "/" + methodPath;
-
-        // 如果 classPath 只有 /，去掉它，避免 //method
-        if (classPath.equals("/")) classPath = "";
-
-        String full = classPath + methodPath;
-        // 处理重复斜杠 (例如 class=/api/ method=/list -> /api//list)
-        return full.replace("//", "/");
     }
 }

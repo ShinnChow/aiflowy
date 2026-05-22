@@ -14,9 +14,6 @@ public class LoginAutoConfig implements WebMvcConfigurer {
     @Resource
     private LoginProperties properties;
 
-    @Resource
-    private NeedApiKeyInterceptor needApiKeyInterceptor;
-
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
         SaInterceptor saInterceptor = new SaInterceptor(handle -> {
@@ -37,6 +34,5 @@ public class LoginAutoConfig implements WebMvcConfigurer {
                 .excludePathPatterns("/thirdAuth/**")
                 .excludePathPatterns("/public-api/**")
                 .excludePathPatterns(properties.getExcludesOrEmpty());
-        registry.addInterceptor(needApiKeyInterceptor);
     }
 }

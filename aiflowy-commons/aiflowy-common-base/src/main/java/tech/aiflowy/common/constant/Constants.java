@@ -30,6 +30,12 @@ public interface Constants {
     String ROOT_DEPT = "root_dept";
     // 第三方登录账号角色标识
     String OAUTH_ROLE_KEY = "oauth_role";
+    // 当前请求的 apiKey
+    String CURRENT_KEY = "currentApiKey";
+    // public-api 请求头
+    String API_KEY_HEADER = "Authorization";
+    // public-api 请求头前缀
+    String HEADER_PREFIX = "Bearer ";
     // 系统设置-环境变量key
     String ENV_VARIABLES_KEY = "env_variables";
 }

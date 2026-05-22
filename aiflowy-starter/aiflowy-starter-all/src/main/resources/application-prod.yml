@@ -6,3 +6,6 @@ spring:
     url: jdbc:mysql://127.0.0.1:3306/aiflowy?useInformationSchema=true&characterEncoding=utf-8
     username: aiflowy
     password: 123456
+springdoc:
+  api-docs:
+    enabled: false

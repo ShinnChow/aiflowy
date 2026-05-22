@@ -32,8 +32,7 @@ public class SysApiKeyServiceImpl extends ServiceImpl<SysApiKeyMapper, SysApiKey
     private SysApiKeyResourceService resourceService;
 
     @Override
-    public void checkApikeyPermission(String apiKey, String requestURI) {
-        SysApiKey sysApiKey = getSysApiKey(apiKey);
+    public void checkApikeyPermission(SysApiKey apiKey, String requestURI) {
         QueryWrapper w = QueryWrapper.create();
         w.eq(SysApiKeyResource::getRequestInterface, requestURI);
         SysApiKeyResource resource = resourceService.getOne(w);
@@ -41,7 +40,7 @@ public class SysApiKeyServiceImpl extends ServiceImpl<SysApiKeyMapper, SysApiKey
             throw new BusinessException("该接口不存在");
         }
         QueryWrapper wm = QueryWrapper.create();
-        wm.eq(SysApiKeyResourceMapping::getApiKeyId, sysApiKey.getId());
+        wm.eq(SysApiKeyResourceMapping::getApiKeyId, apiKey.getId());
         wm.eq(SysApiKeyResourceMapping::getApiKeyResourceId, resource.getId());
         long count = mappingService.count(wm);
         if (count == 0) {

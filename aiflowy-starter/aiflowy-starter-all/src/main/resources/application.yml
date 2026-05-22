@@ -63,7 +63,7 @@ aiflowy:
       voice: siyue
   login:
     # 放行接口路径
-    excludes: /api/v1/auth/**, /static/**, /userCenter/auth/**, /userCenter/public/**
+    excludes: /api/v1/auth/**, /static/**, /userCenter/auth/**, /userCenter/public/**, /v3/api-docs/**
   storage:
     type: local # xFileStorage / local
     # 本地文件存储配置
@@ -146,3 +146,9 @@ captcha:
   # 开启二次验证
   secondary:
     enabled: true
+springdoc:
+  api-docs:
+    enabled: true
+  group-configs:
+    - group: public-api
+      packages-to-scan: tech.aiflowy.publicapi.controller
