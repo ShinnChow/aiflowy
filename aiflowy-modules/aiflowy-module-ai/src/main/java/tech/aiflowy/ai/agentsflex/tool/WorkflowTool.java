@@ -48,7 +48,7 @@ public class WorkflowTool extends BaseTool {
             parameter.setDescription(parameterDef.getDescription());
             DataType dataType = parameterDef.getDataType();
             if (dataType == null) dataType = DataType.String;
-            parameter.setType(dataType.toString());
+            parameter.setType(dataType.toString().toLowerCase());
             parameter.setRequired(parameterDef.isRequired());
             parameters[i] = parameter;
         }
